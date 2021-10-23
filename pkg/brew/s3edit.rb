@@ -5,7 +5,7 @@ class S3edit < Formula
 
   if OS.mac?
       url "https://github.com/jefftt/s3edit/releases/download/#{version}/s3edit-#{version}-x86_64-apple-darwin.tar.gz"
-      sha256 "7f73d029053a77e7d60564f03dd9e40fef5b210a38282249d4ebca552de8e847"
+      sha256 "b294ac1bfb96684aaac10dd678666369345741108b452367a10d8c7fb4e7c47f"
   end
 
   def install
