@@ -7,5 +7,9 @@ class S3edit < Formula
       url "https://github.com/jefftt/s3edit/releases/download/#{version}/s3edit-#{version}-x86_64-apple-darwin.tar.gz"
       sha256 "7f73d029053a77e7d60564f03dd9e40fef5b210a38282249d4ebca552de8e847"
   end
+
+  def install
+    bin.install "s3edit"
+  end
 end
 
