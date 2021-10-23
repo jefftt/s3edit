@@ -37,7 +37,8 @@ fn parse_args() -> Result<Opt> {
                 .arg(Arg::from_usage("--target <target> 'new field name'"))
                 .arg(Arg::from_usage(
                     "-p, --parallelism n 'max number of files to process at any given time, defaults to 5'",
-                )),
+                ))
+                .arg(Arg::from_usage("--dry-run")),
         )
         .get_matches();
 
@@ -59,6 +60,7 @@ fn parse_args() -> Result<Opt> {
                 source: sub_m.value_of("source").unwrap().to_string(),
                 target: sub_m.value_of("target").unwrap().to_string(),
                 concurrency: sub_m.value_of("parallel").map_or(5, |v| v.parse().unwrap()),
+                dryrun: sub_m.is_present("dry-run"),
             }),
             (command, _) => return Err(anyhow!("Unknown command: {}", command)),
         }
@@ -85,4 +87,5 @@ pub(crate) struct JsonFieldRenameParams {
     pub(crate) source: String,
     pub(crate) target: String,
     pub(crate) concurrency: usize,
+    pub(crate) dryrun: bool,
 }

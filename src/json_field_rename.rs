@@ -60,13 +60,22 @@ async fn process(
         acc
     });
 
-    client
-        .put_object()
-        .bucket(bucket)
-        .key(file)
-        .body(s3::ByteStream::from(overwrite))
-        .send()
-        .await?;
+    if params.dryrun {
+        println!(
+            "overwriting {} {} to:\n{}",
+            bucket,
+            file,
+            String::from_utf8(overwrite).unwrap()
+        );
+    } else {
+        client
+            .put_object()
+            .bucket(bucket)
+            .key(file)
+            .body(s3::ByteStream::from(overwrite))
+            .send()
+            .await?;
+    }
 
     Ok(())
 }
