@@ -9,7 +9,10 @@ pub(crate) async fn run(
     s3url: &S3Url,
     params: JsonFieldRenameParams,
 ) -> Result<()> {
-    println!("{} {}", s3url.bucket, s3url.prefix);
+    println!(
+        "renaming field: {} to {} in bucket: {} prefix: {}",
+        params.source, params.target, s3url.bucket, s3url.prefix
+    );
     let mut page_token = None;
     let mut files = Vec::new();
     loop {
@@ -53,12 +56,26 @@ async fn process(
     let raw_body = &response.body.collect().await?.into_bytes();
     let jsonlines = serde_json::Deserializer::from_slice(&raw_body).into_iter::<Value>();
 
-    let overwrite = jsonlines.fold(Vec::new(), |mut acc, json| {
-        let renamed = rename(json.unwrap(), &params.source, &params.target).unwrap();
-        acc.extend_from_slice(&serde_json::to_vec(&renamed).unwrap());
-        acc.push(b'\n');
-        acc
-    });
+    let mut changed = false;
+    let overwrite = jsonlines
+        .map(|jsonline| {
+            let mut json = jsonline.unwrap();
+            // ignore error here, if the field doesn't exist then leave the JSON as is
+            if let Ok(_) = rename(&mut json, &params.source, &params.target) {
+                changed = true;
+            }
+            serde_json::to_vec(&json).unwrap()
+        })
+        .fold(Vec::new(), |mut acc, json| {
+            acc.extend_from_slice(&json);
+            acc.push(b'\n');
+            acc
+        });
+
+    if !changed {
+        println!("nothing to change, exiting");
+        return Ok(());
+    }
 
     if params.dryrun {
         println!(
@@ -80,14 +97,46 @@ async fn process(
     Ok(())
 }
 
-// TODO: support nested json
-fn rename(mut json: Value, source: &str, target: &str) -> Result<Value> {
+// Replaces the field name in place
+fn rename(json: &mut Value, source: &str, target: &str) -> Result<()> {
     if let Some(root) = json.as_object_mut() {
-        if let Some(value) = root.remove(source) {
-            root.insert(target.to_string(), value);
-            return Ok(json);
+        let mut path = json_pointer(source);
+        let mut parent = root;
+        loop {
+            if path.is_empty() {
+                break;
+            } else {
+                let head = path.pop().unwrap();
+                if !parent.contains_key(&head) {
+                    break;
+                } else {
+                    // found it
+                    if path.is_empty() {
+                        let value = parent.remove(&head).unwrap();
+                        parent.insert(target.to_string(), value);
+                        return Ok(());
+                    } else {
+                        // search the child object
+                        if let Some(nested) = parent.get_mut(&head).unwrap().as_object_mut() {
+                            parent = nested;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
         }
     }
 
     return Err(anyhow!("field not found"));
+}
+
+fn json_pointer(s: &str) -> Vec<String> {
+    if !s.starts_with('/') {
+        return vec![s.to_string()];
+    }
+    s.split('/')
+        .skip(1)
+        .map(|x| x.replace("~1", "/").replace("~0", "~"))
+        .collect()
 }

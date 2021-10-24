@@ -33,7 +33,7 @@ fn parse_args() -> Result<Opt> {
         .subcommand(
             SubCommand::with_name("json-field-rename")
                 .about("rename json field for jsonline files")
-                .arg(Arg::from_usage("--source <source> 'original field name, currently only supports flat JSON structure'"))
+                .arg(Arg::from_usage("--source <source> 'original field name, read as JSON pointer if starting with '/''"))
                 .arg(Arg::from_usage("--target <target> 'new field name'"))
                 .arg(Arg::from_usage(
                     "-p, --parallelism n 'max number of files to process at any given time, defaults to 5'",
@@ -83,9 +83,9 @@ enum Command {
     JsonFieldRename(JsonFieldRenameParams),
 }
 
-pub(crate) struct JsonFieldRenameParams {
-    pub(crate) source: String,
-    pub(crate) target: String,
-    pub(crate) concurrency: usize,
-    pub(crate) dryrun: bool,
+pub struct JsonFieldRenameParams {
+    source: String,
+    target: String,
+    concurrency: usize,
+    dryrun: bool,
 }
